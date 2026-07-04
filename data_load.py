@@ -2,13 +2,14 @@ import os
 import json
 import pandas as pd
 import mysql.connector
+from dotenv import load_dotenv
 
+load_dotenv()
 
 path = r"C:\Jinal project\PhonePe-pulse-main\pulse-master\data\aggregated\transaction\country\india\state"
 
 data_list = []
 
-# 👉 Read JSON files
 for state in os.listdir(path):
     state_path = os.path.join(path, state)
 
@@ -20,7 +21,7 @@ for state in os.listdir(path):
                 for file in os.listdir(year_path):
                     file_path = os.path.join(year_path, file)
 
-                    with open(file_path, 'r') as f:
+                    with open(file_path, "r") as f:
                         data = json.load(f)
 
                         if data.get("data") and data["data"].get("transactionData"):
@@ -34,39 +35,34 @@ for state in os.listdir(path):
                                     "amount": i["paymentInstruments"][0]["amount"]
                                 })
 
-# 👉 DataFrame
 df = pd.DataFrame(data_list)
 
-print(df.head())
-print(df.isnull().sum())
-print("Total Rows:", len(df))
-
-# 👉 MySQL Connection
 conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Jinaldodiya@15",   
-    database="phonepe"
+    host=os.getenv("DB_HOST"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    database=os.getenv("DB_NAME")
 )
 
 cursor = conn.cursor()
 
-# 👉 Insert Data
 for index, row in df.iterrows():
-    cursor.execute("""
-        INSERT INTO aggregated_transaction 
+    cursor.execute(
+        """
+        INSERT INTO aggregated_transaction
         (state, year, quarter, transaction_type, count, amount)
         VALUES (%s, %s, %s, %s, %s, %s)
-    """, (
-        row['state'],
-        row['year'],
-        int(row['quarter']),
-        row['type'],   
-        row['count'],
-        row['amount']
-    ))
+        """,
+        (
+            row["state"],
+            row["year"],
+            int(row["quarter"]),
+            row["type"],
+            row["count"],
+            row["amount"]
+        )
+    )
 
-# 👉 Commit
 conn.commit()
 
-print("✅ Data inserted successfully!")
+print("Data inserted successfully")

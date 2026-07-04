@@ -1,12 +1,14 @@
+import os
 import streamlit as st
 import pandas as pd
 import mysql.connector
 import plotly.express as px
+from dotenv import load_dotenv
 
-# 👉 Page config
+load_dotenv()
+
 st.set_page_config(page_title="PhonePe Dashboard", layout="wide")
 
-# 👉 COLORFUL UI
 st.markdown("""
 <style>
 .stApp {
@@ -22,36 +24,32 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-# 👉 Title
 st.markdown("<h1 style='text-align: center;'>📊 PhonePe Dashboard</h1>", unsafe_allow_html=True)
 
-# 👉 DB connection
 conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Jinaldodiya@15",   
-    database="phonepe"
+    host=os.getenv("DB_HOST"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    database=os.getenv("DB_NAME")
 )
 
 df = pd.read_sql("SELECT * FROM aggregated_transaction", conn)
 
-# 👉 Sidebar filters
 st.sidebar.markdown("## 🎛️ Controls")
-state = st.sidebar.selectbox("📍 Select State", df['state'].unique())
-year = st.sidebar.selectbox("📅 Select Year", df['year'].unique())
 
-filtered_df = df[(df['state'] == state) & (df['year'] == year)]
+state = st.sidebar.selectbox("📍 Select State", df["state"].unique())
+year = st.sidebar.selectbox("📅 Select Year", df["year"].unique())
 
-# 👉 Metrics
-total_amount = filtered_df['amount'].sum()
-total_count = filtered_df['count'].sum()
+filtered_df = df[(df["state"] == state) & (df["year"] == year)]
+
+total_amount = filtered_df["amount"].sum()
+total_count = filtered_df["count"].sum()
 
 col1, col2 = st.columns(2)
 
 with col1:
     st.markdown(f"""
-    <div style="background: linear-gradient(45deg,#ff9a9e,#fad0c4);
-    padding:20px;border-radius:12px">
+    <div style="background: linear-gradient(45deg,#ff9a9e,#fad0c4);padding:20px;border-radius:12px">
     <h3>💰 Total Amount</h3>
     <h2>₹ {total_amount:,.0f}</h2>
     </div>
@@ -59,8 +57,7 @@ with col1:
 
 with col2:
     st.markdown(f"""
-    <div style="background: linear-gradient(45deg,#a1c4fd,#c2e9fb);
-    padding:20px;border-radius:12px">
+    <div style="background: linear-gradient(45deg,#a1c4fd,#c2e9fb);padding:20px;border-radius:12px">
     <h3>🔢 Total Transactions</h3>
     <h2>{total_count:,}</h2>
     </div>
@@ -68,7 +65,6 @@ with col2:
 
 st.markdown("---")
 
-# 👉 Charts
 col3, col4 = st.columns(2)
 
 with col3:
@@ -92,7 +88,6 @@ with col4:
     fig2.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig2, use_container_width=True)
 
-# 👉 Top States
 st.markdown("## 🏆 Top 10 States")
 
 top_states = df.groupby("state")["amount"].sum().sort_values(ascending=False).head(10).reset_index()
@@ -108,12 +103,10 @@ fig3 = px.bar(
 fig3.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
 st.plotly_chart(fig3, use_container_width=True)
 
-# 👉 🌍 INDIA MAP (NO GEOJSON - FINAL)
 st.markdown("## 🌍 India Map")
 
 state_data = df.groupby("state")["amount"].sum().reset_index()
 
-# 👉 clean names
 state_data["state"] = state_data["state"].str.replace("-", " ")
 state_data["state"] = state_data["state"].str.replace("&", "and")
 state_data["state"] = state_data["state"].str.title()
@@ -134,6 +127,5 @@ fig_map.update_layout(
 
 st.plotly_chart(fig_map, use_container_width=True)
 
-# 👉 Footer
 st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>✨ Made by Jinal 🚀</p>", unsafe_allow_html=True)
